@@ -1,0 +1,399 @@
+<!--
+E-Commerce Portal - Single-file HTML (inline CSS + JS)
+Features implemented:
+1. Top navigation (Home, Products, Contact Us, About Us)
+2. User Registration & Login forms with input validation
+3. Sections: Orders list, Wishlist, Comments & Reviews, Customer Care, Reporting options
+4. Uses localStorage for simple persistence (demo only)
+5. Small sample products and interactions (add to wishlist, place order, add review)
+
+How to use:
+- Open this file in a browser (double click) to run locally.
+- To upload to GitHub: create a repo, add this file, commit & push. Steps are included below the page (outside this file).
+
+Note: This is a front-end demo (no backend). For production you'd replace localStorage with API calls.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>E-Shop Demo (Inline CSS & JS)</title>
+  <style>
+    /* Inline CSS required by the assignment */
+    :root{--accent:#2a9d8f;--muted:#666}
+    body{font-family:Segoe UI, Roboto, Arial; margin:0; background:#f7f7f8; color:#222}
+    header{background:white; box-shadow:0 2px 6px rgba(0,0,0,0.06); position:sticky; top:0; z-index:100}
+    .container{max-width:1100px; margin:18px auto; padding:0 18px}
+    nav{display:flex; align-items:center; gap:18px; padding:12px 0}
+    .logo{font-weight:700; color:var(--accent); font-size:20px}
+    .menu{display:flex; gap:10px; margin-left:18px}
+    .menu a{padding:8px 12px; text-decoration:none; color:#333; border-radius:6px}
+    .menu a:hover{background:#eef7f6}
+    .actions{margin-left:auto; display:flex; gap:10px}
+    button{cursor:pointer; border:0; padding:8px 12px; border-radius:6px}
+    .btn-primary{background:var(--accent); color:white}
+    .btn-ghost{background:transparent}
+    main{padding:20px 0}
+    .grid{display:grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap:16px}
+    .card{background:white; border-radius:10px; padding:14px; box-shadow:0 4px 12px rgba(20,20,20,0.04)}
+    .product img{width:100%; height:160px; object-fit:cover; border-radius:8px}
+    .muted{color:var(--muted); font-size:13px}
+    h2{margin:8px 0}
+    .small{font-size:13px}
+    form .row{display:flex; gap:8px; margin-bottom:8px}
+    label{display:block; font-weight:600; font-size:13px; margin-bottom:6px}
+    input, textarea{width:100%; padding:8px 10px; border-radius:6px; border:1px solid #ddd}
+    .notice{color:#b00020; font-size:13px}
+    footer{padding:18px 0; color:var(--muted); text-align:center}
+    .section-title{display:flex; align-items:center; justify-content:space-between}
+    /* responsive tweaks */
+    @media (max-width:600px){ .menu{display:none} }
+    .list{list-style:none; padding:0; margin:0}
+    .list li{padding:8px 0; border-bottom:1px dashed #eee}
+    .pill{display:inline-block; padding:6px 8px; border-radius:999px; font-size:12px; background:#f0f6f5}
+    .topbar-stats{display:flex; gap:10px; align-items:center}
+    .report-actions{display:flex; gap:8px}
+    .link-like{background:none; color:var(--accent); border:0; padding:0; cursor:pointer}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <nav>
+        <div class="logo">E-Shop Demo</div>
+        <div class="menu">
+          <a href="#home">Home</a>
+          <a href="#products">Products</a>
+          <a href="#orders">Orders</a>
+          <a href="#wishlist">Wishlist</a>
+          <a href="#reviews">Reviews</a>
+          <a href="#contact">Contact Us</a>
+          <a href="#about">About Us</a>
+        </div>
+
+        <div class="actions">
+          <button class="btn-ghost" id="reportBtn">Download Report</button>
+          <button class="btn-primary" id="openLoginBtn">Login</button>
+          <button class="btn-primary" id="openRegBtn" style="background:#264653">Register</button>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="home" class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap">
+        <div>
+          <h1>Welcome to the E-Shop Demo</h1>
+          <p class="muted">A simple single-file demo showing main e-commerce flows (UI + client-side interactions)</p>
+        </div>
+        <div class="topbar-stats">
+          <div class="pill">Orders: <span id="statOrders">0</span></div>
+          <div class="pill">Wishlist: <span id="statWishlist">0</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="products" style="margin-top:18px">
+      <div class="section-title">
+        <h2>Products</h2>
+        <div class="muted small">Click "Add to Wishlist" or "Buy Now" to interact</div>
+      </div>
+      <div class="grid" id="productsGrid"></div>
+    </section>
+
+    <section id="orders" style="margin-top:18px">
+      <div class="section-title">
+        <h2>Orders</h2>
+        <div class="muted small">Your order history is saved locally (demo)</div>
+      </div>
+      <div class="card" id="ordersCard">
+        <ul class="list" id="ordersList"></ul>
+      </div>
+    </section>
+
+    <section id="wishlist" style="margin-top:18px">
+      <div class="section-title">
+        <h2>Wishlist</h2>
+        <div class="muted small">Items you saved for later</div>
+      </div>
+      <div class="card" id="wishlistCard">
+        <ul class="list" id="wishlistList"></ul>
+      </div>
+    </section>
+
+    <section id="reviews" style="margin-top:18px">
+      <div class="section-title">
+        <h2>Comments & Reviews</h2>
+        <div class="muted small">Share feedback about products</div>
+      </div>
+      <div class="card">
+        <form id="reviewForm">
+          <div style="display:flex; gap:8px; flex-wrap:wrap">
+            <div style="flex:1 1 220px">
+              <label for="reviewName">Name</label>
+              <input id="reviewName" required />
+            </div>
+            <div style="flex:1 1 120px">
+              <label for="reviewRating">Rating (1-5)</label>
+              <input id="reviewRating" type="number" min="1" max="5" value="5" required />
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <label for="reviewText">Comment</label>
+            <textarea id="reviewText" rows="3" required></textarea>
+          </div>
+          <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end">
+            <button type="submit" class="btn-primary">Add Review</button>
+          </div>
+        </form>
+        <hr style="margin:12px 0" />
+        <ul class="list" id="reviewsList"></ul>
+      </div>
+    </section>
+
+    <section id="contact" style="margin-top:18px">
+      <div class="section-title">
+        <h2>Customer Care</h2>
+        <div class="muted small">Contact our support team</div>
+      </div>
+      <div class="card">
+        <form id="contactForm">
+          <div class="row">
+            <div style="flex:1">
+              <label for="contactName">Name</label>
+              <input id="contactName" required />
+            </div>
+            <div style="flex:1">
+              <label for="contactEmail">Email</label>
+              <input id="contactEmail" type="email" required />
+            </div>
+          </div>
+          <div>
+            <label for="contactMsg">Message</label>
+            <textarea id="contactMsg" rows="3" required></textarea>
+          </div>
+          <div style="margin-top:8px; display:flex; justify-content:flex-end">
+            <button type="submit" class="btn-primary">Send</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="about" style="margin-top:18px">
+      <div class="card">
+        <h2>About Us</h2>
+        <p class="muted">This is a front-end demo built as a college assignment example. It uses inline CSS and JavaScript and persists data in browser localStorage only. Replace storage and add authentication for a real app.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">E-Shop Demo • Built for educational purposes</div>
+  </footer>
+
+  <!-- Login & Registration modals (simple) -->
+  <div id="modalRoot" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.35); z-index:200">
+    <div id="modalCard" style="width:420px; max-width:95%; background:white; border-radius:10px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,0.18)">
+      <div id="modalContent"></div>
+      <div style="text-align:right; margin-top:12px">
+        <button id="closeModal" class="link-like">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== Sample data ======
+    const sampleProducts = [
+      {id:1, name:'Wireless Headphones', price:1499, img:'https://picsum.photos/seed/p1/600/400'},
+      {id:2, name:'Mechanical Keyboard', price:2599, img:'https://picsum.photos/seed/p2/600/400'},
+      {id:3, name:'Smart Watch', price:3499, img:'https://picsum.photos/seed/p3/600/400'},
+      {id:4, name:'Gaming Mouse', price:799, img:'https://picsum.photos/seed/p4/600/400'}
+    ];
+
+    // ====== Local storage helpers ======
+    const DB = {
+      get(k){ try { return JSON.parse(localStorage.getItem(k)) || [] } catch(e){return []} },
+      set(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+    }
+
+    // Initialize lists
+    if(!localStorage.getItem('orders')) DB.set('orders', []);
+    if(!localStorage.getItem('wishlist')) DB.set('wishlist', []);
+    if(!localStorage.getItem('reviews')) DB.set('reviews', []);
+    if(!localStorage.getItem('users')) DB.set('users', []); // store users (demo only)
+
+    // ====== Render functions ======
+    function renderProducts(){
+      const grid = document.getElementById('productsGrid'); grid.innerHTML='';
+      sampleProducts.forEach(p=>{
+        const div = document.createElement('div'); div.className='card product';
+        div.innerHTML = `
+          <img src="${p.img}" alt="${p.name}" />
+          <h3>${p.name}</h3>
+          <div class="muted">₹${p.price}</div>
+          <div style="margin-top:8px; display:flex; gap:8px;">
+            <button class="btn-primary" onclick="buyNow(${p.id})">Buy Now</button>
+            <button onclick="addToWishlist(${p.id})" class="btn-ghost">Add to Wishlist</button>
+          </div>
+        `;
+        grid.appendChild(div);
+      })
+    }
+
+    function renderOrders(){
+      const list = document.getElementById('ordersList'); const orders = DB.get('orders'); list.innerHTML='';
+      if(orders.length===0) list.innerHTML='<li class="muted">No orders yet.</li>';
+      orders.forEach(o=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${o.productName}</strong> — ₹${o.price} <div class="muted small">on ${new Date(o.date).toLocaleString()}</div>`;
+        list.appendChild(li);
+      })
+      document.getElementById('statOrders').innerText = orders.length;
+    }
+
+    function renderWishlist(){
+      const list = document.getElementById('wishlistList'); const wish = DB.get('wishlist'); list.innerHTML='';
+      if(wish.length===0) list.innerHTML='<li class="muted">Wishlist empty.</li>';
+      wish.forEach(w=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${w.productName}</strong> — ₹${w.price} <div style="float:right"><button class="link-like" onclick="removeFromWishlist(${w.id})">Remove</button></div>`;
+        list.appendChild(li);
+      })
+      document.getElementById('statWishlist').innerText = wish.length;
+    }
+
+    function renderReviews(){
+      const list = document.getElementById('reviewsList'); const reviews = DB.get('reviews'); list.innerHTML='';
+      if(reviews.length===0) list.innerHTML='<li class="muted">No reviews yet.</li>';
+      reviews.slice().reverse().forEach(r=>{
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${r.name}</strong> <span class="muted">(${r.rating}/5)</span><div>${r.text}</div>`;
+        list.appendChild(li);
+      })
+    }
+
+    // ====== Actions ======
+    function addToWishlist(productId){
+      const p = sampleProducts.find(x=>x.id===productId);
+      const wish = DB.get('wishlist');
+      if(wish.some(x=>x.id===p.id)) return alert('Already in wishlist');
+      wish.push({id:p.id, productName:p.name, price:p.price}); DB.set('wishlist', wish); renderWishlist();
+    }
+    function removeFromWishlist(id){ const wish = DB.get('wishlist').filter(x=>x.id!==id); DB.set('wishlist', wish); renderWishlist(); }
+
+    function buyNow(productId){
+      const p = sampleProducts.find(x=>x.id===productId);
+      const orders = DB.get('orders');
+      orders.push({id:Date.now(), productName:p.name, price:p.price, date: new Date()}); DB.set('orders', orders); renderOrders(); alert('Order placed (demo)');
+    }
+
+    // ====== Reviews ======
+    document.getElementById('reviewForm').addEventListener('submit', function(ev){
+      ev.preventDefault();
+      const name = document.getElementById('reviewName').value.trim();
+      const rating = Number(document.getElementById('reviewRating').value);
+      const text = document.getElementById('reviewText').value.trim();
+      if(!name||!text||!rating) return alert('Please fill the review form');
+      const reviews = DB.get('reviews'); reviews.push({name, rating, text, date: new Date()}); DB.set('reviews', reviews);
+      document.getElementById('reviewForm').reset(); renderReviews();
+    })
+
+    // ====== Customer contact ======
+    document.getElementById('contactForm').addEventListener('submit', function(ev){
+      ev.preventDefault();
+      const name=document.getElementById('contactName').value.trim();
+      const email=document.getElementById('contactEmail').value.trim();
+      const msg=document.getElementById('contactMsg').value.trim();
+      if(!name||!email||!msg) return alert('Please fill contact form');
+      alert('Message sent to Customer Care (demo)'); this.reset();
+    })
+
+    // ====== Login & Registration modals & validation ======
+    const modalRoot = document.getElementById('modalRoot'); const modalContent = document.getElementById('modalContent');
+    document.getElementById('openLoginBtn').addEventListener('click', ()=>openModal(loginHtml()));
+    document.getElementById('openRegBtn').addEventListener('click', ()=>openModal(regHtml()));
+    document.getElementById('closeModal').addEventListener('click', ()=>closeModal());
+    modalRoot.addEventListener('click', (e)=>{ if(e.target===modalRoot) closeModal(); })
+
+    function openModal(html){ modalContent.innerHTML = html; modalRoot.style.display='flex'; bindModalForms(); }
+    function closeModal(){ modalRoot.style.display='none'; modalContent.innerHTML=''; }
+
+    function regHtml(){
+      return `
+        <h3>Register</h3>
+        <form id="regForm">
+          <div style="margin-bottom:8px"><label>Full name</label><input id="regName" required /></div>
+          <div style="margin-bottom:8px"><label>Email</label><input id="regEmail" type="email" required /></div>
+          <div style="margin-bottom:8px"><label>Password</label><input id="regPass" type="password" required /></div>
+          <div style="margin-bottom:8px"><label>Confirm Password</label><input id="regPass2" type="password" required /></div>
+          <div style="text-align:right"><button type="submit" class="btn-primary">Create Account</button></div>
+          <div id="regNotice" class="notice"></div>
+        </form>
+      `
+    }
+    function loginHtml(){
+      return `
+        <h3>Login</h3>
+        <form id="loginForm">
+          <div style="margin-bottom:8px"><label>Email</label><input id="loginEmail" type="email" required /></div>
+          <div style="margin-bottom:8px"><label>Password</label><input id="loginPass" type="password" required /></div>
+          <div style="text-align:right"><button type="submit" class="btn-primary">Sign In</button></div>
+          <div id="loginNotice" class="notice"></div>
+        </form>
+      `
+    }
+
+    function bindModalForms(){
+      const regForm = document.getElementById('regForm'); if(regForm) regForm.addEventListener('submit', onRegister);
+      const loginForm = document.getElementById('loginForm'); if(loginForm) loginForm.addEventListener('submit', onLogin);
+    }
+
+    function onRegister(ev){
+      ev.preventDefault(); const name=document.getElementById('regName').value.trim(); const email=document.getElementById('regEmail').value.trim(); const pass=document.getElementById('regPass').value; const pass2=document.getElementById('regPass2').value; const notice=document.getElementById('regNotice'); notice.innerText='';
+      // Validation: name, email format, password >=6, match
+      if(name.length<3) return notice.innerText='Name must be at least 3 characters';
+      if(!validateEmail(email)) return notice.innerText='Invalid email address';
+      if(pass.length<6) return notice.innerText='Password must be at least 6 characters';
+      if(pass!==pass2) return notice.innerText='Passwords do not match';
+      // save user (demo only)
+      const users = DB.get('users'); if(users.some(u=>u.email===email)) return notice.innerText='Email already registered';
+      users.push({id:Date.now(), name, email, pass}); DB.set('users', users); notice.style.color='green'; notice.innerText='Account created! You may login.'; setTimeout(()=>closeModal(),900);
+    }
+
+    function onLogin(ev){
+      ev.preventDefault(); const email=document.getElementById('loginEmail').value.trim(); const pass=document.getElementById('loginPass').value; const notice=document.getElementById('loginNotice'); notice.innerText='';
+      if(!validateEmail(email)) return notice.innerText='Enter a valid email';
+      const users = DB.get('users'); const u = users.find(x=>x.email===email && x.pass===pass);
+      if(!u) return notice.innerText='Invalid credentials';
+      notice.style.color='green'; notice.innerText = 'Login successful. (Demo)'; setTimeout(()=>closeModal(),700);
+    }
+
+    function validateEmail(email){
+      // careful simple regex
+      return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+    }
+
+    // ====== Reporting: generate CSV of orders & wishlist ======
+    function generateCSV(){
+      const orders = DB.get('orders'); const wish = DB.get('wishlist');
+      let csv = 'type,product,price,date\n';
+      orders.forEach(o=> csv += `order,${escapeCsv(o.productName)},${o.price},${new Date(o.date).toISOString()}\n`);
+      wish.forEach(w=> csv += `wishlist,${escapeCsv(w.productName)},${w.price},\n`);
+      return csv;
+    }
+    function escapeCsv(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
+    document.getElementById('reportBtn').addEventListener('click', ()=>{
+      const csv = generateCSV(); const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download='e-shop-report.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    })
+
+    // ====== Utilities & Startup ======
+    function init(){ renderProducts(); renderOrders(); renderWishlist(); renderReviews(); }
+    init();
+  </script>
+</body>
+</html>
